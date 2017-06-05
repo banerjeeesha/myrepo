@@ -29,6 +29,7 @@ library(GGally)
 library(Amelia)
 library(MVN)
 library(gam)
+library(lmtest)
 
 options(na.action = na.warn)
 set.seed(123)
@@ -74,21 +75,50 @@ summary(fit7)
 fit8 <- lm(Knowledge.and.technology.outputs ~ Privacy.Score, data=x)
 summary(fit8)
 
-ggplot(x, aes(x = Privacy.Score , y = Knowledge.and.technology.outputs)) +
-  geom_point() +
-  geom_smooth(method = "lm", color = "yellow") +
-  labs(title = 'dist',
-       y = 'Score') +
-  theme_minimal()
+x <- x %>%
+  mutate(wage_log = log(Knowledge.and.technology.outputs))
 
-fit11 <- glm(Knowledge.and.technology.outputs ~ Institutions + Regulatory.environment + Infrastructure + Market.sophistication + Business.sophistication + Human.capital.and.research + Privacy.Score, data=x, family = poisson)
+fit11 <- lm(wage_log ~ Institutions + Regulatory.environment + Infrastructure + Market.sophistication + Business.sophistication + Human.capital.and.research + Privacy.Score, data=x)
 summary(fit11)
 
+qqPlot(fit1)
+qqPlot(fit11)
 
+augment(fit1, x) %>%
+  mutate(.student = rstudent(fit1)) %>%
+  ggplot(aes(.student)) +
+  geom_density(adjust = .5) +
+  labs(x = "Studentized residuals",
+       y = "Estimated density")
+
+augment(fit11, x) %>%
+  mutate(.student = rstudent(fit11)) %>%
+  ggplot(aes(.student)) +
+  geom_density(adjust = .5) +
+  labs(x = "Studentized residuals",
+       y = "Estimated density")
+
+bptest(fit11)
+
+fit12 <- lm(wage_log ~  Privacy.Score, data=x)
+summary(fit12)
+
+ggplot(x, aes(Privacy.Score, Regulatory.environment)) +
+  geom_point()
 ```
 
 ```{r}
-
+x %>%
+  add_predictions(fit11) %>%
+  add_residuals(fit11) %>%
+  ggplot(aes(pred, resid)) +
+  geom_point(alpha = .2) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_quantile(method = "rqss", lambda = 5, quantiles = c(.05, .95)) +
+  labs(title = "Heteroscedastic variance of error terms",
+       x = "Predicted values",
+       y = "Residuals")
+```
 #req_model <- lm(biden ~ age + female + educ + dem + rep , biden)
 #pander(tidy(fit1))
 mse <- function(model, data) {
