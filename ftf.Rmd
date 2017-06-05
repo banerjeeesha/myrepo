@@ -1,0 +1,124 @@
+---
+title: "Untitled"
+author: "Esha Banerjee"
+date: "20 May 2017"
+output: pdf_document
+---
+
+## 6a
+```{r}
+knitr::opts_chunk$set(echo = FALSE,warning = FALSE,
+                      message = FALSE, cache = TRUE,
+                      fig.align = 'center')
+library(knitr)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(broom)
+library(modelr)
+library(stringr)
+library(rcfss)
+library(haven)
+library(car)
+library(lmtest)
+library(plotly)
+library(coefplot)
+library(RColorBrewer)
+library(GGally)
+library(Amelia)
+library(MVN)
+library(gam)
+
+options(na.action = na.warn)
+set.seed(123)
+theme_set(theme_minimal())
+
+```
+
+```{r}
+x <- read.csv("Book2.csv")
+
+x$Institutions <- as.numeric(as.character(x$Institutions))
+x$Regulatory.environment <- as.numeric(as.character(x$Regulatory.environment))
+x$Infrastructure <- as.numeric(as.character(x$Infrastructure))
+x$Market.sophistication <- as.numeric(as.character(x$Market.sophistication))
+x$Business.sophistication <- as.numeric(as.character(x$Business.sophistication))
+x$Human.capital.and.research <- as.numeric(as.character(x$Human.capital.and.research))
+#Knowledge.and.technology.outputs
+x$Knowledge.and.technology.outputs <- as.numeric(as.character(x$Knowledge.and.technology.outputs)) 
+x$Privacy.Score <- as.numeric(as.character(x$Privacy.Score))
+x
+
+fit1 <- lm(Knowledge.and.technology.outputs ~ Institutions + Regulatory.environment + Infrastructure + Market.sophistication + Business.sophistication + Human.capital.and.research + Privacy.Score, data=x)
+summary(fit1)
+
+fit2 <- lm(Knowledge.and.technology.outputs ~ Institutions, data=x)
+summary
+
+fit3 <- lm(Knowledge.and.technology.outputs ~ Regulatory.environment, data=x)
+summary(fit3)
+
+fit4 <- lm(Knowledge.and.technology.outputs ~ Infrastructure, data=x)
+summary(fit4)
+
+fit5 <- lm(Knowledge.and.technology.outputs ~ Market.sophistication , data=x)
+summary(fit5)
+
+fit6 <- lm(Knowledge.and.technology.outputs ~ Business.sophistication, data=x)
+summary(fit6)
+
+fit7 <- lm(Knowledge.and.technology.outputs ~ Human.capital.and.research, data=x)
+summary(fit7)
+
+fit8 <- lm(Knowledge.and.technology.outputs ~ Privacy.Score, data=x)
+summary(fit8)
+
+ggplot(x, aes(x = Privacy.Score , y = Knowledge.and.technology.outputs)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "yellow") +
+  labs(title = 'dist',
+       y = 'Score') +
+  theme_minimal()
+
+fit11 <- glm(Knowledge.and.technology.outputs ~ Institutions + Regulatory.environment + Infrastructure + Market.sophistication + Business.sophistication + Human.capital.and.research + Privacy.Score, data=x, family = poisson)
+summary(fit11)
+
+
+```
+
+```{r}
+
+#req_model <- lm(biden ~ age + female + educ + dem + rep , biden)
+#pander(tidy(fit1))
+mse <- function(model, data) {
+  x <- modelr:::residuals(model, data)
+  mean(x ^ 2, na.rm = TRUE)
+}
+mse_all <- round (mse(fit1, x), 2)
+mse_all
+
+set.seed(4884)
+split <- resample_partition(x, c(test = 0.3, train = 0.7))
+req_model1 <- lm(Knowledge.and.technology.outputs ~ Institutions + Regulatory.environment + Infrastructure + Market.sophistication + Business.sophistication + Human.capital.and.research + Privacy.Score, data= split$train)
+#pander(tidy(req_model1))
+mse_valid <- round (mse(req_model1, split$test), 2)
+mse_valid
+
+set.seed(4884)
+mse_100 <- replicate(100, {
+  split <- resample_partition(x, c(test = 0.3, train = 0.7))
+  train_model <- lm(Knowledge.and.technology.outputs ~ Institutions + Regulatory.environment + Infrastructure + Market.sophistication + Business.sophistication + Human.capital.and.research + Privacy.Score, data= split$train)
+  mse(train_model, split$test)
+})
+mse_valid_100 <- mean(mse_100, na.rm = TRUE)
+mse_valid_100
+
+
+mydata <- x
+
+clg_gam <- gam(Knowledge.and.technology.outputs ~ Institutions + Regulatory.environment + Infrastructure + Market.sophistication + Business.sophistication + Human.capital.and.research + Privacy.Score, data = mydata, na.action = na.pass)
+summary(clg_gam)
+
+```
+
